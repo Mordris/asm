@@ -2713,7 +2713,14 @@ async function installSelectedLibrarySkill(input: {
     : resolutionSource === "registry"
       ? ("registry" as const)
       : ("github" as const);
-  const skillPath = relativePath(scanBaseDir, inspection.plan.sourceDir);
+  // skillPath is a repo-relative subpath (used to re-locate the skill inside a
+  // freshly cloned source on `library update`), so normalize to POSIX
+  // separators: the lock stays portable and join(sourceRoot, skillPath) still
+  // resolves correctly on Windows.
+  const skillPath = relativePath(
+    scanBaseDir,
+    inspection.plan.sourceDir,
+  ).replace(/\\/g, "/");
   const installed = await installLibrarySkill({
     sourceDir: inspection.plan.sourceDir,
     libraryName: inspection.skillName,
@@ -3534,10 +3541,12 @@ async function cmdInstall(args: ParsedArgs) {
               installedAt: new Date().toISOString(),
               provider: inspection.plan.providerName,
               scope: inspection.plan.scope,
+              // POSIX-normalized repo-relative subpath (see the library
+              // install path above) so the recorded lock stays portable.
               skillPath: relativePath(
                 inspection.plan.tempDir,
                 inspection.plan.sourceDir,
-              ),
+              ).replace(/\\/g, "/"),
               targetDir: inspection.plan.targetDir,
               sourceType,
               ...(resolutionSource === "registry"

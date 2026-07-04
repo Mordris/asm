@@ -21,9 +21,9 @@ import {
   lstat,
   readlink,
   realpath,
-  symlink,
   chmod,
 } from "fs/promises";
+import { createDirSymlink } from "./utils/fs";
 import { tmpdir, homedir } from "os";
 import { spawnCollect, runInlineTs } from "./utils/test-spawn";
 
@@ -1416,7 +1416,12 @@ describe("CLI integration: install --library", () => {
         "--json",
       ],
       {
-        env: { ...process.env, HOME: homeDir, NO_COLOR: "1" },
+        env: {
+          ...process.env,
+          HOME: homeDir,
+          USERPROFILE: homeDir,
+          NO_COLOR: "1",
+        },
       },
     );
 
@@ -1481,14 +1486,24 @@ describe("CLI integration: install --library", () => {
         "--json",
       ],
       {
-        env: { ...process.env, HOME: homeDir, NO_COLOR: "1" },
+        env: {
+          ...process.env,
+          HOME: homeDir,
+          USERPROFILE: homeDir,
+          NO_COLOR: "1",
+        },
       },
     );
 
     const res = await spawnCollect(
       ["npx", "tsx", CLI_BIN, "library", "list", "--json"],
       {
-        env: { ...process.env, HOME: homeDir, NO_COLOR: "1" },
+        env: {
+          ...process.env,
+          HOME: homeDir,
+          USERPROFILE: homeDir,
+          NO_COLOR: "1",
+        },
       },
     );
 
@@ -1526,7 +1541,14 @@ describe("CLI integration: install --library", () => {
         "-y",
         "--json",
       ],
-      { env: { ...process.env, HOME: homeDir, NO_COLOR: "1" } },
+      {
+        env: {
+          ...process.env,
+          HOME: homeDir,
+          USERPROFILE: homeDir,
+          NO_COLOR: "1",
+        },
+      },
     );
     expect(installRes.exitCode).toBe(0);
 
@@ -1537,7 +1559,14 @@ describe("CLI integration: install --library", () => {
 
     const updateRes = await spawnCollect(
       ["npx", "tsx", CLI_BIN, "library", "update", "brainstorming", "--json"],
-      { env: { ...process.env, HOME: homeDir, NO_COLOR: "1" } },
+      {
+        env: {
+          ...process.env,
+          HOME: homeDir,
+          USERPROFILE: homeDir,
+          NO_COLOR: "1",
+        },
+      },
     );
 
     expect(updateRes.exitCode).toBe(0);
@@ -1584,7 +1613,14 @@ describe("CLI integration: install --library", () => {
         "-y",
         "--json",
       ],
-      { env: { ...process.env, HOME: homeDir, NO_COLOR: "1" } },
+      {
+        env: {
+          ...process.env,
+          HOME: homeDir,
+          USERPROFILE: homeDir,
+          NO_COLOR: "1",
+        },
+      },
     );
     expect(installRes.exitCode).toBe(0);
     const lock = JSON.parse(
@@ -1611,7 +1647,14 @@ describe("CLI integration: install --library", () => {
 
     const updateRes = await spawnCollect(
       ["npx", "tsx", CLI_BIN, "library", "update", "root-skill", "--json"],
-      { env: { ...process.env, HOME: homeDir, NO_COLOR: "1" } },
+      {
+        env: {
+          ...process.env,
+          HOME: homeDir,
+          USERPROFILE: homeDir,
+          NO_COLOR: "1",
+        },
+      },
     );
 
     expect(updateRes.exitCode).toBe(0);
@@ -1642,7 +1685,14 @@ describe("CLI integration: install --library", () => {
     const homeDir = join(tempDir, "home");
     const res = await spawnCollect(
       ["npx", "tsx", CLI_BIN, "library", "update", "missing", "--json"],
-      { env: { ...process.env, HOME: homeDir, NO_COLOR: "1" } },
+      {
+        env: {
+          ...process.env,
+          HOME: homeDir,
+          USERPROFILE: homeDir,
+          NO_COLOR: "1",
+        },
+      },
     );
 
     expect(res.exitCode).toBe(1);
@@ -1681,7 +1731,14 @@ describe("CLI integration: install --library", () => {
         "-y",
         "--json",
       ],
-      { env: { ...process.env, HOME: homeDir, NO_COLOR: "1" } },
+      {
+        env: {
+          ...process.env,
+          HOME: homeDir,
+          USERPROFILE: homeDir,
+          NO_COLOR: "1",
+        },
+      },
     );
     expect(installRes.exitCode).toBe(0);
 
@@ -1693,7 +1750,14 @@ describe("CLI integration: install --library", () => {
 
     const updateRes = await spawnCollect(
       ["npx", "tsx", CLI_BIN, "library", "update", "--all", "--json"],
-      { env: { ...process.env, HOME: homeDir, NO_COLOR: "1" } },
+      {
+        env: {
+          ...process.env,
+          HOME: homeDir,
+          USERPROFILE: homeDir,
+          NO_COLOR: "1",
+        },
+      },
     );
 
     expect(updateRes.exitCode).toBe(1);
@@ -1730,7 +1794,12 @@ describe("CLI integration: install --library", () => {
         "--json",
       ],
       {
-        env: { ...process.env, HOME: homeDir, NO_COLOR: "1" },
+        env: {
+          ...process.env,
+          HOME: homeDir,
+          USERPROFILE: homeDir,
+          NO_COLOR: "1",
+        },
       },
     );
     expect(installRes.exitCode).toBe(0);
@@ -1752,7 +1821,12 @@ describe("CLI integration: install --library", () => {
       ],
       {
         cwd: projectDir,
-        env: { ...process.env, HOME: homeDir, NO_COLOR: "1" },
+        env: {
+          ...process.env,
+          HOME: homeDir,
+          USERPROFILE: homeDir,
+          NO_COLOR: "1",
+        },
       },
     );
 
@@ -1792,7 +1866,12 @@ describe("CLI integration: install --library", () => {
       ],
       {
         cwd: projectDir,
-        env: { ...process.env, HOME: homeDir, NO_COLOR: "1" },
+        env: {
+          ...process.env,
+          HOME: homeDir,
+          USERPROFILE: homeDir,
+          NO_COLOR: "1",
+        },
       },
     );
 
@@ -1823,7 +1902,12 @@ describe("CLI integration: install --library", () => {
         "--json",
       ],
       {
-        env: { ...process.env, HOME: homeDir, NO_COLOR: "1" },
+        env: {
+          ...process.env,
+          HOME: homeDir,
+          USERPROFILE: homeDir,
+          NO_COLOR: "1",
+        },
       },
     );
     expect(installRes.exitCode).toBe(0);
@@ -1846,7 +1930,12 @@ describe("CLI integration: install --library", () => {
       ],
       {
         cwd: projectDir,
-        env: { ...process.env, HOME: homeDir, NO_COLOR: "1" },
+        env: {
+          ...process.env,
+          HOME: homeDir,
+          USERPROFILE: homeDir,
+          NO_COLOR: "1",
+        },
       },
     );
 
@@ -1877,7 +1966,12 @@ describe("CLI integration: install --library", () => {
         "--json",
       ],
       {
-        env: { ...process.env, HOME: homeDir, NO_COLOR: "1" },
+        env: {
+          ...process.env,
+          HOME: homeDir,
+          USERPROFILE: homeDir,
+          NO_COLOR: "1",
+        },
       },
     );
     expect(installRes.exitCode).toBe(0);
@@ -1899,7 +1993,12 @@ describe("CLI integration: install --library", () => {
       ],
       {
         cwd: projectDir,
-        env: { ...process.env, HOME: homeDir, NO_COLOR: "1" },
+        env: {
+          ...process.env,
+          HOME: homeDir,
+          USERPROFILE: homeDir,
+          NO_COLOR: "1",
+        },
       },
     );
     expect(activateRes.exitCode).toBe(0);
@@ -1929,7 +2028,12 @@ describe("CLI integration: install --library", () => {
       ],
       {
         cwd: projectDir,
-        env: { ...process.env, HOME: homeDir, NO_COLOR: "1" },
+        env: {
+          ...process.env,
+          HOME: homeDir,
+          USERPROFILE: homeDir,
+          NO_COLOR: "1",
+        },
       },
     );
 
@@ -1978,7 +2082,12 @@ describe("CLI integration: install --library", () => {
       ],
       {
         cwd: projectDir,
-        env: { ...process.env, HOME: homeDir, NO_COLOR: "1" },
+        env: {
+          ...process.env,
+          HOME: homeDir,
+          USERPROFILE: homeDir,
+          NO_COLOR: "1",
+        },
       },
     );
 
@@ -2007,7 +2116,12 @@ describe("CLI integration: install --library", () => {
       ],
       {
         cwd: projectDir,
-        env: { ...process.env, HOME: homeDir, NO_COLOR: "1" },
+        env: {
+          ...process.env,
+          HOME: homeDir,
+          USERPROFILE: homeDir,
+          NO_COLOR: "1",
+        },
       },
     );
 
@@ -2036,7 +2150,12 @@ describe("CLI integration: install --library", () => {
       ],
       {
         cwd: projectDir,
-        env: { ...process.env, HOME: homeDir, NO_COLOR: "1" },
+        env: {
+          ...process.env,
+          HOME: homeDir,
+          USERPROFILE: homeDir,
+          NO_COLOR: "1",
+        },
       },
     );
 
@@ -2067,7 +2186,12 @@ describe("CLI integration: install --library", () => {
       ],
       {
         cwd: projectDir,
-        env: { ...process.env, HOME: homeDir, NO_COLOR: "1" },
+        env: {
+          ...process.env,
+          HOME: homeDir,
+          USERPROFILE: homeDir,
+          NO_COLOR: "1",
+        },
       },
     );
 
@@ -2151,7 +2275,12 @@ describe("CLI integration: install --library", () => {
         "--json",
       ],
       {
-        env: { ...process.env, HOME: homeDir, NO_COLOR: "1" },
+        env: {
+          ...process.env,
+          HOME: homeDir,
+          USERPROFILE: homeDir,
+          NO_COLOR: "1",
+        },
       },
     );
 
@@ -3457,7 +3586,7 @@ metadata:
       `---\nname: link-via-symlink\nversion: 1.0.0\n---\n# Body\n`,
     );
     const linkedSrc = join(tempDir, "linked-src");
-    await symlink(realDir, linkedSrc, "dir");
+    await createDirSymlink(realDir, linkedSrc);
     // The link name comes from the source directory basename, not the SKILL.md
     // name field, so the resulting symlink lives under "linked-src".
     const providerLink = join(homedir(), ".claude", "skills", "linked-src");

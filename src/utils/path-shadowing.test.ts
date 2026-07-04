@@ -10,7 +10,15 @@ let dirA: string;
 let dirB: string;
 let dirC: string;
 
+// These tests model a POSIX PATH: extension-less `asm` binaries, chmod +x, and
+// a file symlink for realpath dedup — none of which apply on Windows (where
+// file symlinks need elevation and executables carry extensions). The product
+// check (doctor's checkNoPathShadowing) is exercised separately and works on
+// Windows; here we validate the POSIX resolution model, so skip on win32.
+const posixOnly = process.platform === "win32" ? describe.skip : describe;
+
 beforeAll(async () => {
+  if (process.platform === "win32") return;
   tmpRoot = await mkdtemp(join(tmpdir(), "asm-shadow-test-"));
   dirA = join(tmpRoot, "a");
   dirB = join(tmpRoot, "b");
@@ -37,7 +45,7 @@ afterAll(async () => {
   if (tmpRoot) await rm(tmpRoot, { recursive: true, force: true });
 });
 
-describe("detectAsmBinaries", () => {
+posixOnly("detectAsmBinaries", () => {
   test("returns empty list when PATH has no asm", async () => {
     const fakeDir = join(tmpRoot, "empty");
     await mkdir(fakeDir);
@@ -82,7 +90,7 @@ describe("detectAsmBinaries", () => {
   });
 });
 
-describe("buildShadowingReport", () => {
+posixOnly("buildShadowingReport", () => {
   test("no binaries → resolved null, shadowed empty", async () => {
     const emptyDir = join(tmpRoot, "emptyreport");
     await mkdir(emptyDir);

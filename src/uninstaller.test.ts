@@ -46,9 +46,9 @@ import {
   lstat,
   realpath,
   rm,
-  symlink,
   readdir,
 } from "fs/promises";
+import { createDirSymlink } from "./utils/fs";
 
 const HOME = homedir();
 
@@ -341,10 +341,14 @@ describe("executeRemoval with symlinkTo", () => {
       const stats = await lstat(dupDir);
       expect(stats.isSymbolicLink()).toBe(true);
 
-      // Should point to the kept directory via relative path
-      const target = await readlink(dupDir);
-      const expectedRel = relative(join(base, "provider-b"), keptDir);
-      expect(target).toBe(expectedRel);
+      // POSIX stores a relative symlink target; Windows junctions store an
+      // absolute one. The realpath check below proves correct resolution on
+      // both, so only assert the relative form where symlinks support it.
+      if (process.platform !== "win32") {
+        const target = await readlink(dupDir);
+        const expectedRel = relative(join(base, "provider-b"), keptDir);
+        expect(target).toBe(expectedRel);
+      }
 
       // Should resolve to the kept directory
       const resolved = await realpath(dupDir);
@@ -366,7 +370,7 @@ describe("executeRemoval with symlinkTo", () => {
       const dupLink = join(base, "dup-link");
       await mkdir(keptDir, { recursive: true });
       await mkdir(oldTarget, { recursive: true });
-      await symlink(oldTarget, dupLink, "dir");
+      await createDirSymlink(oldTarget, dupLink);
 
       const plan: RemovalPlan = {
         directories: [{ path: dupLink, isSymlink: true }],
@@ -606,7 +610,7 @@ describe("getExistingTargets", () => {
       const realDir = join(base, "real");
       const linkDir = join(base, "link");
       await mkdir(realDir);
-      await symlink(realDir, linkDir, "dir");
+      await createDirSymlink(realDir, linkDir);
 
       const plan: RemovalPlan = {
         directories: [{ path: linkDir, isSymlink: true }],
@@ -1032,7 +1036,7 @@ describe("executeRemoval with relocation", () => {
       await mkdir(realDir, { recursive: true });
       await mkdir(dirname(linkDir), { recursive: true });
       await writeFile(join(realDir, "SKILL.md"), "real content");
-      await symlink(realDir, linkDir, "dir");
+      await createDirSymlink(realDir, linkDir);
 
       // Sanity: the symlink resolves to the real content
       const preResolve = await realpath(linkDir);
@@ -1089,8 +1093,8 @@ describe("executeRemoval with relocation", () => {
       await mkdir(dirname(linkA), { recursive: true });
       await mkdir(dirname(linkB), { recursive: true });
       await writeFile(join(realDir, "SKILL.md"), "shared content");
-      await symlink(realDir, linkA, "dir");
-      await symlink(realDir, linkB, "dir");
+      await createDirSymlink(realDir, linkA);
+      await createDirSymlink(realDir, linkB);
 
       const plan: RemovalPlan = {
         directories: [{ path: realDir, isSymlink: false }],
@@ -1145,7 +1149,7 @@ describe("executeRemoval with relocation", () => {
       await mkdir(dirname(agentsLink), { recursive: true });
       await writeFile(join(claudeReal, "SKILL.md"), "claude content");
       await writeFile(join(codexReal, "SKILL.md"), "codex content");
-      await symlink(claudeReal, agentsLink, "dir");
+      await createDirSymlink(claudeReal, agentsLink);
 
       const plan: RemovalPlan = {
         directories: [{ path: claudeReal, isSymlink: false }],
@@ -1205,7 +1209,7 @@ describe("executeRemoval with relocation", () => {
       await mkdir(dirname(blockedParent), { recursive: true });
       await writeFile(blockedParent, "not a directory");
       await writeFile(join(realDir, "SKILL.md"), "content");
-      await symlink(realDir, goodLink, "dir");
+      await createDirSymlink(realDir, goodLink);
 
       const plan: RemovalPlan = {
         directories: [{ path: realDir, isSymlink: false }],
@@ -1252,7 +1256,7 @@ describe("executeRemoval with relocation", () => {
       const linkDir = join(base, "codex", "skills", "my-skill");
       await mkdir(realDir, { recursive: true });
       await mkdir(dirname(linkDir), { recursive: true });
-      await symlink(realDir, linkDir, "dir");
+      await createDirSymlink(realDir, linkDir);
 
       const plan: RemovalPlan = {
         directories: [{ path: realDir, isSymlink: false }],
@@ -1302,7 +1306,7 @@ describe("executeRemoval with relocation", () => {
       await mkdir(realDir, { recursive: true });
       await writeFile(join(realDir, "SKILL.md"), "source content");
       await mkdir(dirname(linkDir), { recursive: true });
-      await symlink(realDir, linkDir, "dir");
+      await createDirSymlink(realDir, linkDir);
 
       // Force rename to report EXDEV so the cp fallback is exercised, then
       // have cp create a partial copy at toPath before throwing — this

@@ -4,15 +4,8 @@ import {
   createLink,
   discoverLinkableSkills,
 } from "./linker";
-import {
-  mkdtemp,
-  writeFile,
-  mkdir,
-  rm,
-  lstat,
-  readlink,
-  symlink,
-} from "fs/promises";
+import { mkdtemp, writeFile, mkdir, rm, lstat, readlink } from "fs/promises";
+import { createDirSymlink } from "./utils/fs";
 import { join } from "path";
 import { tmpdir } from "os";
 
@@ -109,7 +102,7 @@ Body.
 `,
     );
     const linkPath = join(tempDir, "linked-skill");
-    await symlink(realDir, linkPath, "dir");
+    await createDirSymlink(realDir, linkPath);
     const result = await validateLinkSource(linkPath);
     expect(result.name).toBe("real-skill");
   });
@@ -279,7 +272,7 @@ describe("discoverLinkableSkills", () => {
       `---\nname: skill-c\nversion: 1.0.0\n---\nBody.\n`,
     );
     const linkedDir = join(tempDir, "linked");
-    await symlink(realDir, linkedDir, "dir");
+    await createDirSymlink(realDir, linkedDir);
     const skills = await discoverLinkableSkills(linkedDir);
     expect(skills.length).toBe(1);
     expect(skills[0].name).toBe("skill-c");

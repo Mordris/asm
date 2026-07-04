@@ -1,4 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { mkdtemp, rm, realpath } from "fs/promises";
+import { tmpdir } from "os";
+import { join } from "path";
 import { runCommand } from "./spawn";
 
 describe("runCommand", () => {
@@ -26,10 +29,19 @@ describe("runCommand", () => {
   });
 
   it("respects the cwd option", async () => {
-    const { stdout, exitCode } = await runCommand(["pwd"], { cwd: "/tmp" });
-    expect(exitCode).toBe(0);
-    // macOS resolves /tmp to /private/tmp; accept either.
-    expect(stdout.trim()).toMatch(/^(\/tmp|\/private\/tmp)$/);
+    // Use node to print the working directory — portable across OSes, unlike
+    // `pwd` + a hardcoded /tmp (which Git Bash rewrites to /c/tmp on Windows).
+    const dir = await mkdtemp(join(tmpdir(), "spawn-cwd-"));
+    try {
+      const { stdout, exitCode } = await runCommand(
+        [process.execPath, "-e", "process.stdout.write(process.cwd())"],
+        { cwd: dir },
+      );
+      expect(exitCode).toBe(0);
+      expect(await realpath(stdout.trim())).toBe(await realpath(dir));
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
   });
 
   it("rejects when argv is empty", async () => {

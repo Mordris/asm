@@ -16,6 +16,11 @@ import { tmpdir } from "os";
 
 const HOME = homedir();
 
+// Normalize path separators so assertions about path *structure* hold on both
+// POSIX (`/`) and Windows (`\`). resolveProviderPath/getConfigPath return
+// OS-native paths, so comparisons must be separator-agnostic.
+const toPosix = (p: string) => p.replace(/\\/g, "/");
+
 describe("getDefaultConfig", () => {
   it("returns a config with version 1", () => {
     const config = getDefaultConfig();
@@ -81,7 +86,7 @@ describe("getDefaultConfig", () => {
 describe("resolveProviderPath", () => {
   it("resolves ~ paths to home directory", () => {
     const result = resolveProviderPath("~/.claude/skills");
-    expect(result).toBe(`${HOME}/.claude/skills`);
+    expect(toPosix(result)).toBe(`${toPosix(HOME)}/.claude/skills`);
   });
 
   it("preserves absolute paths", () => {
@@ -96,19 +101,19 @@ describe("resolveProviderPath", () => {
 
   it("handles ~/path with deeper nesting", () => {
     const result = resolveProviderPath("~/a/b/c/d");
-    expect(result).toBe(`${HOME}/a/b/c/d`);
+    expect(toPosix(result)).toBe(`${toPosix(HOME)}/a/b/c/d`);
   });
 
   it("handles ~ alone as prefix", () => {
     const result = resolveProviderPath("~/");
-    expect(result).toBe(HOME);
+    expect(toPosix(result)).toBe(toPosix(HOME));
   });
 });
 
 describe("getConfigPath", () => {
   it("returns a path under ~/.config/agent-skill-manager", () => {
     const path = getConfigPath();
-    expect(path).toContain(".config/agent-skill-manager/config.json");
+    expect(toPosix(path)).toContain(".config/agent-skill-manager/config.json");
   });
 });
 

@@ -6,8 +6,8 @@ import {
   writeFile,
   readFile,
   access,
-  symlink,
 } from "node:fs/promises";
+import { createDirSymlink } from "./utils/fs";
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
 import {
@@ -361,7 +361,7 @@ describe("symlinked-sibling topology (real install layout, issue #91)", () => {
     );
     // codex's directory is a relative symlink at the claude copy, exactly as
     // the installer creates it.
-    await symlink(relative(codexProvider, canonicalDir), symlinkDir, "dir");
+    await createDirSymlink(relative(codexProvider, canonicalDir), symlinkDir);
   });
 
   afterEach(async () => {

@@ -2,6 +2,7 @@ import { describe, test, expect, beforeEach, afterEach } from "vitest";
 import { mkdtemp, writeFile, mkdir, rm, readFile } from "fs/promises";
 import { tmpdir } from "os";
 import { join } from "path";
+import { pathToFileURL } from "node:url";
 import {
   shortHash,
   resolveSourceType,
@@ -727,7 +728,7 @@ describe("updateSkill happy path", () => {
 
     const { updateSkill } = await import("./updater");
     const entry: LockEntry = {
-      source: `file://${bareRepoPath}`,
+      source: pathToFileURL(bareRepoPath).href,
       commitHash: oldCommit,
       ref: null,
       installedAt: "2026-01-01T00:00:00.000Z",
@@ -798,7 +799,7 @@ describe("updateSkill happy path", () => {
     let writtenLock: any = null;
     const { updateSkill } = await import("./updater");
     const entry = {
-      source: `file://${bareRepoPath}`,
+      source: pathToFileURL(bareRepoPath).href,
       commitHash: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       ref: null,
       installedAt: "2026-01-01T00:00:00.000Z",
@@ -854,7 +855,7 @@ describe("updateSkill happy path", () => {
 
     const { updateSkill } = await import("./updater");
     const entry: LockEntry = {
-      source: `file://${bareRepoPath}`,
+      source: pathToFileURL(bareRepoPath).href,
       commitHash: oldCommit,
       ref: null,
       installedAt: "2026-01-01T00:00:00.000Z",
@@ -898,7 +899,7 @@ describe("updateSkill happy path", () => {
 
     const { updateSkill } = await import("./updater");
     const entry: LockEntry = {
-      source: `file://${bareRepoPath}`,
+      source: pathToFileURL(bareRepoPath).href,
       commitHash: oldCommit,
       ref: null,
       installedAt: "2026-01-01T00:00:00.000Z",
@@ -947,7 +948,7 @@ describe("updateSkill happy path", () => {
 
     const { updateSkill } = await import("./updater");
     const entry: LockEntry = {
-      source: `file://${bareRepoPath}`,
+      source: pathToFileURL(bareRepoPath).href,
       commitHash: oldCommit,
       ref: null,
       installedAt: "2026-01-01T00:00:00.000Z",

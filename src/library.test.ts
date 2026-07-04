@@ -9,9 +9,9 @@ import {
   realpath,
   rename,
   rm,
-  symlink,
   writeFile,
 } from "fs/promises";
+import { createDirSymlink } from "./utils/fs";
 import { tmpdir } from "os";
 import { join, relative, resolve } from "path";
 import {
@@ -257,7 +257,7 @@ describe("activateLibrarySkill", () => {
     const existingPath = join(tempDir, "existing");
     await mkdir(targetDir, { recursive: true });
     await mkdir(existingPath, { recursive: true });
-    await symlink(existingPath, symlinkPath, "dir");
+    await createDirSymlink(existingPath, symlinkPath);
 
     await expect(
       activateLibrarySkill({
@@ -278,7 +278,7 @@ describe("activateLibrarySkill", () => {
     const existingPath = join(tempDir, "existing");
     await mkdir(targetDir, { recursive: true });
     await mkdir(existingPath, { recursive: true });
-    await symlink(existingPath, symlinkPath, "dir");
+    await createDirSymlink(existingPath, symlinkPath);
 
     const result = await activateLibrarySkill({
       libraryPath,
@@ -315,22 +315,27 @@ describe("activateLibrarySkill", () => {
     expect((await lstat(symlinkPath)).isDirectory()).toBe(true);
   });
 
-  test("rethrows non-ENOENT lstat errors on the activation target", async () => {
-    await mkdir(targetDir, { recursive: true });
-    await chmod(targetDir, 0o000);
-    try {
-      await expect(
-        activateLibrarySkill({
-          libraryPath,
-          targetDir,
-          activationName: "brainstorming",
-          force: false,
-        }),
-      ).rejects.toMatchObject({ code: "EACCES" });
-    } finally {
-      await chmod(targetDir, 0o755);
-    }
-  });
+  // chmod 0o000 does not make lstat fail with EACCES on Windows (POSIX mode
+  // bits are not enforced there), so this permission-error path is POSIX-only.
+  test.skipIf(process.platform === "win32")(
+    "rethrows non-ENOENT lstat errors on the activation target",
+    async () => {
+      await mkdir(targetDir, { recursive: true });
+      await chmod(targetDir, 0o000);
+      try {
+        await expect(
+          activateLibrarySkill({
+            libraryPath,
+            targetDir,
+            activationName: "brainstorming",
+            force: false,
+          }),
+        ).rejects.toMatchObject({ code: "EACCES" });
+      } finally {
+        await chmod(targetDir, 0o755);
+      }
+    },
+  );
 
   test("rejects invalid activation names before touching filesystem targets", async () => {
     const outsideDir = join(tempDir, "provider", "outside");
@@ -387,7 +392,7 @@ describe("deactivateLibrarySkill", () => {
 
   test("removes a provider symlink pointing into the library", async () => {
     const symlinkPath = join(targetDir, "brainstorming");
-    await symlink(libraryPath, symlinkPath, "dir");
+    await createDirSymlink(libraryPath, symlinkPath);
     const target = await realpath(libraryPath);
 
     const result = await deactivateLibrarySkill({
@@ -414,7 +419,7 @@ describe("deactivateLibrarySkill", () => {
   test("removes a provider symlink with a relative target into the library", async () => {
     const symlinkPath = join(targetDir, "brainstorming");
     const relativeTarget = relative(targetDir, libraryPath);
-    await symlink(relativeTarget, symlinkPath, "dir");
+    await createDirSymlink(relativeTarget, symlinkPath);
     const target = await realpath(libraryPath);
 
     const result = await deactivateLibrarySkill({
@@ -442,7 +447,7 @@ describe("deactivateLibrarySkill", () => {
     const symlinkPath = join(targetDir, "brainstorming");
     const relativeTarget = relative(targetDir, libraryPath);
     const expectedTarget = resolve(targetDir, relativeTarget);
-    await symlink(relativeTarget, symlinkPath, "dir");
+    await createDirSymlink(relativeTarget, symlinkPath);
     await rm(libraryPath, { recursive: true, force: true });
 
     const result = await deactivateLibrarySkill({
@@ -466,7 +471,7 @@ describe("deactivateLibrarySkill", () => {
   test("removes a symlink into the library when the library dir was deleted", async () => {
     const symlinkPath = join(targetDir, "brainstorming");
     const expectedTarget = libraryPath;
-    await symlink(libraryPath, symlinkPath, "dir");
+    await createDirSymlink(libraryPath, symlinkPath);
     await rm(join(tempDir, "library"), { recursive: true, force: true });
 
     const result = await deactivateLibrarySkill({
@@ -492,7 +497,7 @@ describe("deactivateLibrarySkill", () => {
     const symlinkPath = join(targetDir, "brainstorming");
     const relativeTarget = relative(targetDir, externalDir);
     await mkdir(externalDir, { recursive: true });
-    await symlink(relativeTarget, symlinkPath, "dir");
+    await createDirSymlink(relativeTarget, symlinkPath);
     await rm(externalDir, { recursive: true, force: true });
 
     await expect(
@@ -506,7 +511,12 @@ describe("deactivateLibrarySkill", () => {
     ).rejects.toThrow(
       `Refusing to deactivate symlink outside the ASM library: ${symlinkPath}.`,
     );
-    await expect(readlink(symlinkPath)).resolves.toBe(relativeTarget);
+    // POSIX stores the relative target verbatim; Windows uses an absolute
+    // junction. The refusal above is the security-relevant assertion; the
+    // exact on-disk target form is platform-specific.
+    if (process.platform !== "win32") {
+      await expect(readlink(symlinkPath)).resolves.toBe(relativeTarget);
+    }
   });
 
   test("refuses to deactivate a real directory", async () => {
@@ -531,7 +541,7 @@ describe("deactivateLibrarySkill", () => {
     const externalDir = join(tempDir, "external");
     const symlinkPath = join(targetDir, "brainstorming");
     await mkdir(externalDir, { recursive: true });
-    await symlink(externalDir, symlinkPath, "dir");
+    await createDirSymlink(externalDir, symlinkPath);
 
     await expect(
       deactivateLibrarySkill({
@@ -1129,7 +1139,10 @@ describe("updateLibrarySkill", () => {
       join(externalSkillDir, "SKILL.md"),
       "---\nname: brainstorming\nversion: 2.0.0\n---\n# Escaped Source\n",
     );
-    await symlink(join(tempDir, "external"), join(sourceRoot, "skills"), "dir");
+    await createDirSymlink(
+      join(tempDir, "external"),
+      join(sourceRoot, "skills"),
+    );
 
     const originalLock = await readLibraryLock(lockPath);
 
@@ -1184,7 +1197,7 @@ describe("updateLibrarySkill", () => {
     const externalDir = join(tempDir, "external-library");
     const linkPath = join(skillsDir, "link");
     await mkdir(externalDir, { recursive: true });
-    await symlink(externalDir, linkPath, "dir");
+    await createDirSymlink(externalDir, linkPath);
 
     const lock = await readLibraryLock(lockPath);
     lock.skills.brainstorming.libraryPath = join(linkPath, "brainstorming");

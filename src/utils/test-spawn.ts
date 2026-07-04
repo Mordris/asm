@@ -3,14 +3,43 @@ import {
   spawn as nodeSpawn,
 } from "node:child_process";
 import { writeFileSync, mkdtempSync, rmSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { tmpdir } from "node:os";
+import { createRequire } from "node:module";
 import type {
   SpawnSyncOptions,
   SpawnOptions,
   SpawnSyncReturns,
   ChildProcess,
 } from "node:child_process";
+
+const require = createRequire(import.meta.url);
+
+/**
+ * tsx's CLI entry. Tests launch it via the current Node binary
+ * (`process.execPath <tsx-cli> …`) rather than the `npx`/`tsx` shim: on Windows
+ * those shims are `.cmd` files that child_process cannot spawn without a shell
+ * (a bare name throws ENOENT; a `.cmd` throws EINVAL under Node's
+ * CVE-2024-27980 hardening), so any `npx tsx …` invocation fails. Resolving via
+ * `package.json` sidesteps tsx's restricted subpath exports.
+ */
+const TSX_CLI = join(
+  dirname(require.resolve("tsx/package.json")),
+  "dist",
+  "cli.mjs",
+);
+
+/**
+ * Rewrite a leading `npx tsx …` argv into `[node, <tsx-cli>, …]` so the same
+ * test argv runs on every platform (see TSX_CLI). Any other argv is returned
+ * unchanged.
+ */
+function normalizeArgv(argv: readonly string[]): readonly string[] {
+  if (argv[0] === "npx" && argv[1] === "tsx") {
+    return [process.execPath, TSX_CLI, ...argv.slice(2)];
+  }
+  return argv;
+}
 
 /**
  * Thin argv-first wrapper around `child_process.spawnSync` for tests. Takes an
@@ -20,7 +49,7 @@ export function spawnSyncArgv(
   argv: readonly string[],
   opts: SpawnSyncOptions = {},
 ): SpawnSyncReturns<string | Buffer> {
-  const [cmd, ...args] = argv;
+  const [cmd, ...args] = normalizeArgv(argv);
   return nodeSpawnSync(cmd, args, opts);
 }
 
@@ -33,7 +62,7 @@ export function spawnArgv(
   argv: readonly string[],
   opts: SpawnOptions = {},
 ): ChildProcess {
-  const [cmd, ...args] = argv;
+  const [cmd, ...args] = normalizeArgv(argv);
   return nodeSpawn(cmd, args, opts);
 }
 
